@@ -1,0 +1,9 @@
+Removed Pin From Net: NetName=UOUT Pin=U5-2
+Added Component: Designator=R18(VR5)
+Added Pin To Net: NetName=GND Pin=R18-1
+Added Pin To Net: NetName=UOUT Pin=R18-3
+Added Pin To Net: NetName=NetR18_2 Pin=R18-2
+Added Pin To Net: NetName=NetR18_2 Pin=U5-2
+Added Net: Name=NetR18_2
+Added Member To Class: ClassName=数控稳压电源 Member=Component R18 4.7k
+Added Room: Name=数控稳压电源

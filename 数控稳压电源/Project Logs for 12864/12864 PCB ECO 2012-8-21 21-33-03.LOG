@@ -1,0 +1,12 @@
+Added Component: Designator=*(10P²å²Û)
+Added Pin To Net: NetName=+5V Pin=*-1
+Added Pin To Net: NetName=GND Pin=*-2
+Added Pin To Net: NetName=D0 Pin=*-3
+Added Pin To Net: NetName=D1 Pin=*-4
+Added Pin To Net: NetName=D2 Pin=*-5
+Added Pin To Net: NetName=D3 Pin=*-6
+Added Pin To Net: NetName=D4 Pin=*-7
+Added Pin To Net: NetName=D5 Pin=*-8
+Added Pin To Net: NetName=D6 Pin=*-9
+Added Pin To Net: NetName=D7 Pin=*-10
+Added Member To Class: ClassName=12864 Member=Component * 10P²å²Û

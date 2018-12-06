@@ -1,0 +1,12 @@
+---- DS1302_ReadData Matches (11 in 3 files) ----
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):/* Name   : DS1302_ReadData                                                  */
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):unsigned char DS1302_ReadData(unsigned char addr) 
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    temp = DS1302_ReadData(addr);//年
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    temp = DS1302_ReadData(addr);//星期
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    temp = DS1302_ReadData(addr);//月
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    temp = DS1302_ReadData(addr);//日
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    temp = DS1302_ReadData(addr);//小时
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    temp = DS1302_ReadData(addr);//分
+DS1302.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    temp = DS1302_ReadData(addr);//秒
+DS1302.h (c:\documents and settings\administrator\桌面\demo\electronicclock):unsigned char DS1302_ReadData(unsigned char addr);
+Main.c (c:\documents and settings\administrator\桌面\demo\electronicclock):    if(DS1302_ReadData(0x81) != g_sTime.m_ucSec)

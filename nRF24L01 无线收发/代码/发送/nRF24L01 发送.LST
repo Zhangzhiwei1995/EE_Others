@@ -1,0 +1,504 @@
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 1   
+
+
+C51 COMPILER V9.50a, COMPILATION OF MODULE NRF24L01_____
+OBJECT MODULE PLACED IN nRF24L01 发送.OBJ
+COMPILER INVOKED BY: C:\Program Files\Keil\C51\BIN\C51.EXE nRF24L01 发送.c BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include <reg52.h>
+   2          #include <intrins.h>
+   3          #include "nrf2401.h"
+   4          typedef unsigned char uchar;
+   5          typedef unsigned int uint;  
+   6          extern void Lcd_lnit (void);    //LCD初始化
+   7          //extern void hanzi_Disp(uchu xJ uchar y,uchar *s);
+   8          uchar *uchartostr (uchar num);
+   9          uchar *uchartostr(uchar num);
+  10          uchar str [4];//作为存储上面uchartostr函数转换的字符
+  11          uchar status;
+  12          uchar TX_ADDRESS[TX_ADR_WIDTH]= {0x01,0x02,0x03,0x04,0x05}; //本地地址 
+  13          uchar RX_ADDRESS[RX_ADR_WIDTH]= {0x01,0x02,0x03,0x04,0x05}; //接收地址 
+  14          
+  15          unsigned char time;   //设置全局变量，专门用于严格延时
+  16          unsigned char flag,tltemp;            //负温度标志 和临时暂存变量
+  17          
+  18          sbit io_LCD12864_RS = P2^0 ;
+  19          sbit io_LCD12864_RW = P2^1 ;
+  20          sbit io_LCD12864_EN = P2^2 ;
+  21          
+  22          sbit CE=P3^4;
+  23          sbit CSN =P3^7;
+  24          sbit SCK =P3^5;
+  25          sbit MOSI =P3^3;
+  26          sbit MISO =P3^6;
+  27          sbit IRQ =P3^2;
+  28          
+  29          sbit DQ=P1^0;
+  30          
+  31          
+  32          #define io_LCD12864_DATAPORT P0
+  33          
+  34          #define SET_DATA  io_LCD12864_RS = 1 ;
+  35          #define SET_INC  io_LCD12864_RS = 0 ;
+  36          #define SET_READ  io_LCD12864_RW = 1 ;
+  37          #define SET_WRITE io_LCD12864_RW = 0 ;
+  38          #define SET_EN    io_LCD12864_EN = 1 ;
+  39          #define CLR_EN    io_LCD12864_EN = 0 ;
+  40          
+  41          void v_Lcd12864PutString_f( unsigned char x, unsigned char y, unsigned char *pData );
+  42          void v_DelayMs_f( unsigned int nDelay );
+  43          //*********************NRF24L01函数定义**************************** 
+  44          //void delayms(uint t);//毫秒延时
+  45          void init_NRF24L01(void);   //模块初始化函数
+  46          //uchar SPI_RW(uchar reg);    //基本SPI读写时序
+  47          uchar SPI_READ_Reg(uchar reg);  //从寄存器reg读一个字节
+  48          //void SetRX_Mode(void);      //设置接收模式
+  49          //uchar SPI_RW_Reg(uchar reg, uchar value);  //向寄存器写一个字节
+  50          //uchar SPI_Read_Buf(uchar reg, uchar *pBuf, uchar uchars); // 从缓冲器读出uchars字节的数据
+  51          //uchar SPI_Write_Buf(uchar reg, uchar *pBuf, uchar uchars); //向缓冲器写进uchars字节的数据
+  52          void nRF24L01_TxPacket(uchar * tx_buf); //启动一次发送
+  53          //uchar nRF24L01_RxPacket(uchar * rx_buf);//读取接收的数据，放入rx_buf数组
+  54          uchar *uchartostr(uchar  num);
+  55          
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 2   
+
+  56          uchar *uchartostr(uchar  num)
+  57          {
+  58   1          uchar  x00,xx,x0,x,n;
+  59   1          x00=num/100;
+  60   1          xx=num%100;
+  61   1          x0= xx/10 ;
+  62   1          x= xx%10 ;
+  63   1          n=0;
+  64   1          if (x00!=0)
+  65   1          {str[n] =x00+48;//值加48即为字符
+  66   2            n++;
+  67   2          }
+  68   1          if(!(x00==0&&x0==0))
+  69   1          {
+  70   2            str[n]=x0+48;
+  71   2            n++;
+  72   2          }
+  73   1          str[n] =x+48;
+  74   1          n++;
+  75   1          str[n]='\0';
+  76   1          return str;
+  77   1      }
+  78            
+  79          /****************************************************************************************************
+  80          /*函数：uint SPI_RW(uint uchar1)
+  81          /*功能：NRF24L01的SPI写时序
+  82          /****************************************************************************************************/
+  83          uint SPI_RW(uint uchar1)
+  84          {
+  85   1          uint bit_ctr;
+  86   1          for(bit_ctr=0;bit_ctr<8;bit_ctr++) // output 8-bit
+  87   1          {
+  88   2          MOSI = (uchar1 & 0x80);         // output 'uchar', MSB to MOSI
+  89   2          uchar1 = (uchar1 << 1);           // shift next bit into MSB..
+  90   2          SCK = 1;                      // Set SCK high..
+  91   2          uchar1 |= MISO;             // capture current MISO bit
+  92   2          SCK = 0;                  // ..then set SCK low again
+  93   2          }
+  94   1          return(uchar1);                 // return read uchar
+  95   1      }
+  96              
+  97          
+  98          /****************************************************************************************************
+  99          /*函数：uchar SPI_Read(uchar reg)
+ 100          /*功能：NRF24L01的SPI读时序
+ 101          /****************************************************************************************************/
+ 102          uchar SPI_Read_Reg(uchar reg)
+ 103          {
+ 104   1        uchar reg_val;
+ 105   1      //  v_Lcd12864PutString_f(0,3,"进入read");
+ 106   1        CSN = 0;  // CSN low, initialize SPI communication...
+ 107   1      //  v_DelayMs_f( 1000 );
+ 108   1        SPI_RW(reg);            // Select register to read from..
+ 109   1        reg_val = SPI_RW(0);    // ..then read registervalue
+ 110   1        CSN = 1;                // CSN high, terminate SPI communication
+ 111   1          
+ 112   1        //  v_DelayMs_f(800);
+ 113   1        //  v_Lcd12864PutString_f(0,3,"退出read");
+ 114   1        
+ 115   1        
+ 116   1        return(reg_val);        // return register value
+ 117   1        
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 3   
+
+ 118   1      }
+ 119          
+ 120          /****************************************************************************************************/
+ 121          /*功能：NRF24L01写寄存器函数
+ 122          /****************************************************************************************************/
+ 123          uint SPI_RW_Reg(uchar reg, uchar value)
+ 124          {
+ 125   1        uint status;
+ 126   1        
+ 127   1        CSN = 0;                   // CSN low, init SPI transaction
+ 128   1        status = SPI_RW(reg);      // select register
+ 129   1        SPI_RW(value);             // ..and write value to it..
+ 130   1        CSN = 1;                   // CSN high again
+ 131   1        
+ 132   1        return(status);            // return nRF24L01 status uchar
+ 133   1      }
+ 134          
+ 135          
+ 136          /****************************************************************************************************/
+ 137          /*函数：uint SPI_Read_Buf(uchar reg, uchar *pBuf, uchar uchars)
+ 138          /*功能: 用于读数据，reg：为寄存器地址，pBuf：为待读出数据地址，uchars：读出数据的个数
+ 139          /****************************************************************************************************/
+ 140          uint SPI_Read_Buf(uchar reg, uchar *pBuf, uchar uchars)
+ 141          {
+ 142   1        uint status,uchar_ctr;
+ 143   1        
+ 144   1        CSN = 0;                        // Set CSN low, init SPI tranaction
+ 145   1        status = SPI_RW(reg);           // Select register to write to and read status uchar
+ 146   1        
+ 147   1        for(uchar_ctr=0;uchar_ctr<uchars;uchar_ctr++)
+ 148   1          pBuf[uchar_ctr] = SPI_RW(0);    // 
+ 149   1        
+ 150   1        CSN = 1;                           
+ 151   1        
+ 152   1        return(status);                    // return nRF24L01 status uchar
+ 153   1      }
+ 154          /*********************************************************************************************************
+ 155          /*函数：uint SPI_Write_Buf(uchar reg, uchar *pBuf, uchar uchars)
+ 156          /*功能: 用于写数据：为寄存器地址，pBuf：为待写入数据地址，uchars：写入数据的个数
+ 157          //********************************************************************************************************
+             -*/
+ 158          uint SPI_Write_Buf(uchar reg, uchar  *pBuf, uchar uchars)
+ 159          {
+ 160   1        uint status,uchar_ctr;
+ 161   1        
+ 162   1        CSN = 0;            //SPI使能       
+ 163   1        status = SPI_RW(reg);   
+ 164   1        for(uchar_ctr=0; uchar_ctr<uchars; uchar_ctr++) //
+ 165   1          {SPI_RW(*pBuf);pBuf++;}
+ 166   1        CSN = 1;           //关闭SPI
+ 167   1        return(status);    // 
+ 168   1      }
+ 169          
+ 170          void init_NRF24L01(void)
+ 171          {
+ 172   1        v_DelayMs_f(1);
+ 173   1        CE=0;
+ 174   1        CSN=1;
+ 175   1        SCK=0;
+ 176   1        IRQ=1;  
+ 177   1        SPI_Write_Buf(WRITE_REG+TX_ADDR,TX_ADDRESS,TX_ADR_WIDTH);
+ 178   1        SPI_Write_Buf(WRITE_REG+RX_ADDR_P0,RX_ADDRESS,TX_ADR_WIDTH);
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 4   
+
+ 179   1        SPI_RW_Reg(WRITE_REG+EN_AA,0X00);
+ 180   1        SPI_RW_Reg(WRITE_REG+EN_RXADDR,0X01);
+ 181   1        SPI_RW_Reg(WRITE_REG+RF_CH,1);
+ 182   1        SPI_RW_Reg(WRITE_REG+RX_PW_P0,RX_PLOAD_WIDTH);
+ 183   1        SPI_RW_Reg(WRITE_REG+RF_SETUP+RF_SETUP,0X07);
+ 184   1      
+ 185   1      }
+ 186          
+ 187          void nRF24L01_TxPacket(unsigned char*tx_buf)
+ 188          {
+ 189   1        CE=0;
+ 190   1        SPI_Write_Buf(WRITE_REG+TX_ADDR,TX_ADDRESS,TX_ADR_WIDTH);
+ 191   1        SPI_Write_Buf(WRITE_REG+RX_ADDR_P0,TX_ADDRESS,TX_ADR_WIDTH);
+ 192   1        SPI_Write_Buf(WR_TX_PLOAD,tx_buf,TX_PLOAD_WIDTH);
+ 193   1        SPI_RW_Reg(WRITE_REG+CONFIG,0X0E);
+ 194   1        CE=1;
+ 195   1        v_DelayMs_f( 1 ) ;
+ 196   1      }
+ 197          
+ 198          //********************************************************************************************************
+             -************************
+ 199          
+ 200          void v_Lcd12864CheckBusy_f( void )      //忙检测函数
+ 201          {
+ 202   1          unsigned int nTimeOut = 0 ;
+ 203   1          SET_INC
+ 204   1          SET_READ
+ 205   1          CLR_EN
+ 206   1          SET_EN
+ 207   1          while( ( io_LCD12864_DATAPORT & 0x80 ) && ( ++nTimeOut != 0 ) ) ; //最高位为0时表允许
+ 208   1          CLR_EN
+ 209   1          SET_INC
+ 210   1          SET_READ
+ 211   1      }
+ 212          
+ 213          void v_Lcd12864SendCmd_f( unsigned char byCmd )      //发送命令
+ 214          {
+ 215   1          v_Lcd12864CheckBusy_f() ;
+ 216   1          SET_INC
+ 217   1          SET_WRITE
+ 218   1          CLR_EN
+ 219   1          io_LCD12864_DATAPORT = byCmd ;
+ 220   1          _nop_();
+ 221   1          _nop_();
+ 222   1          SET_EN  
+ 223   1          _nop_();
+ 224   1          _nop_();
+ 225   1          CLR_EN
+ 226   1          SET_READ
+ 227   1          SET_INC
+ 228   1      }
+ 229          void v_Lcd12864SendData_f( unsigned char byData )    //发送数据
+ 230          {
+ 231   1          v_Lcd12864CheckBusy_f() ;
+ 232   1          SET_DATA
+ 233   1          SET_WRITE
+ 234   1          CLR_EN
+ 235   1          io_LCD12864_DATAPORT = byData ;
+ 236   1          _nop_();
+ 237   1          _nop_();
+ 238   1          SET_EN  
+ 239   1          _nop_();
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 5   
+
+ 240   1          _nop_();
+ 241   1          CLR_EN
+ 242   1          SET_READ
+ 243   1          SET_INC
+ 244   1      }
+ 245          
+ 246          void v_DelayMs_f( unsigned int nDelay )              //n毫秒延时
+ 247          {
+ 248   1          unsigned int i ;
+ 249   1          for( ; nDelay > 0 ; nDelay-- )
+ 250   1          {
+ 251   2              for( i = 125 ; i > 0 ; i-- ) ;
+ 252   2          }
+ 253   1      }
+ 254          
+ 255          void v_Lcd12864Init_f( void )                  //初始化
+ 256          {
+ 257   1          v_Lcd12864SendCmd_f( 0x30 ) ;              //基本指令集  功能设定 8位数据 无扩充指令
+ 258   1          v_DelayMs_f( 50 ) ;
+ 259   1          v_Lcd12864SendCmd_f( 0x01 ) ;              //清屏
+ 260   1          v_DelayMs_f( 50 ) ;
+ 261   1          v_Lcd12864SendCmd_f( 0x06 ) ;              //光标右移
+ 262   1          v_DelayMs_f( 50 ) ;
+ 263   1          v_Lcd12864SendCmd_f( 0x0c ) ;              //开显示 关游标
+ 264   1      }
+ 265          void v_Lcd12864SetAddress_f( unsigned char x, y )  //地址转换   x是列数，y是行数 共8列4行
+ 266          {
+ 267   1          unsigned char byAddress ;
+ 268   1          switch( y )
+ 269   1          {
+ 270   2              case 0 :    byAddress = 0x80 + x ;
+ 271   2                  break;
+ 272   2              case 1 :    byAddress = 0x90 + x ;
+ 273   2                  break ;
+ 274   2              case 2 :    byAddress = 0x88 + x ;
+ 275   2                  break ;
+ 276   2              case 3 :    byAddress = 0x98 + x ;
+ 277   2                  break ;
+ 278   2              default :
+ 279   2                  break ;
+ 280   2          }
+ 281   1          v_Lcd12864SendCmd_f( byAddress ) ;
+ 282   1      }
+ 283          void v_Lcd12864PutString_f( unsigned char x, unsigned char y, unsigned char *pData )
+ 284          {
+ 285   1          v_Lcd12864SetAddress_f( x, y ) ;
+ 286   1          while( *pData != '\0' )
+ 287   1          {
+ 288   2              v_Lcd12864SendData_f( *pData++ ) ;
+ 289   2          }            
+ 290   1      
+ 291   1      }
+ 292          
+ 293          //*******************************************************************************************
+ 294          /*****************************************************
+ 295          函数功能：将DS18B20传感器初始化，读取应答信号
+ 296          出口参数：flag 
+ 297          ***************************************************/
+ 298          bit Init_DS18B20(void)  
+ 299          {
+ 300   1       bit flag;         //储存DS18B20是否存在的标志，flag=0，表示存在；flag=1，表示不存在
+ 301   1       DQ = 1;           //先将数据线拉高
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 6   
+
+ 302   1       for(time=0;time<2;time++) //略微延时约6微秒
+ 303   1           ;
+ 304   1       DQ = 0;           //再将数据线从高拉低，要求保持480~960us
+ 305   1       for(time=0;time<200;time++)  //略微延时约600微秒
+ 306   1           ;         //以向DS18B20发出一持续480~960us的低电平复位脉冲 
+ 307   1       DQ = 1;           //释放数据线（将数据线拉高） 
+ 308   1        for(time=0;time<10;time++)
+ 309   1           ;  //延时约30us（释放总线后需等待15~60us让DS18B20输出存在脉冲）
+ 310   1       flag=DQ;          //让单片机检测是否输出了存在脉冲（DQ=0表示存在）      
+ 311   1       for(time=0;time<200;time++)  //延时足够长时间，等待存在脉冲输出完毕
+ 312   1            ;
+ 313   1       return (flag);    //返回检测成功标志
+ 314   1      }
+ 315          /*****************************************************
+ 316          函数功能：从DS18B20读取一个字节数据
+ 317          出口参数：dat
+ 318          ***************************************************/ 
+ 319          unsigned char ReadOneChar(void)
+ 320           {
+ 321   1          unsigned char i=0;  
+ 322   1          unsigned char dat;  //储存读出的一个字节数据
+ 323   1          for (i=0;i<8;i++)
+ 324   1           {
+ 325   2             
+ 326   2             DQ =1;       // 先将数据线拉高
+ 327   2             _nop_();     //等待一个机器周期   
+ 328   2             DQ = 0;      //单片机从DS18B20读书据时,将数据线从高拉低即启动读时序
+ 329   2             _nop_();     //等待一个机器周期       
+ 330   2             DQ = 1;     //将数据线"人为"拉高,为单片机检测DS18B20的输出电平作准备
+ 331   2             for(time=0;time<2;time++)
+ 332   2                   ;      //延时约6us，使主机在15us内采样
+ 333   2              dat>>=1;
+ 334   2             if(DQ==1)
+ 335   2                dat|=0x80;  //如果读到的数据是1，则将1存入dat
+ 336   2            else
+ 337   2              dat|=0x00;//如果读到的数据是0，则将0存入dat
+ 338   2               //将单片机检测到的电平信号DQ存入r[i] 
+ 339   2             for(time=0;time<8;time++)
+ 340   2                  ;              //延时3us,两个读时序之间必须有大于1us的恢复期  
+ 341   2            }                     
+ 342   1         return(dat);    //返回读出的十六进制数据
+ 343   1      }
+ 344          /*****************************************************
+ 345          函数功能：向DS18B20写入一个字节数据
+ 346          入口参数：dat
+ 347          ***************************************************/  
+ 348          WriteOneChar(unsigned char dat)
+ 349          {
+ 350   1        unsigned char i=0;
+ 351   1        for (i=0; i<8; i++)
+ 352   1           {
+ 353   2            DQ =1;         // 先将数据线拉高
+ 354   2            _nop_();       //等待一个机器周期  
+ 355   2            DQ=0;          //将数据线从高拉低时即启动写时序       
+ 356   2            DQ=dat&0x01;   //利用与运算取出要写的某位二进制数据,
+ 357   2                             //并将其送到数据线上等待DS18B20采样  
+ 358   2           for(time=0;time<10;time++) 
+ 359   2               ;//延时约30us，DS18B20在拉低后的约15~60us期间从数据线上采样
+ 360   2            DQ=1;          //释放数据线       
+ 361   2            for(time=0;time<1;time++)
+ 362   2              ;//延时3us,两个写时序间至少需要1us的恢复期
+ 363   2            dat>>=1;       //将dat中的各二进制位数据右移1位
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 7   
+
+ 364   2           }
+ 365   1          for(time=0;time<4;time++)
+ 366   1                      ; //稍作延时,给硬件一点反应时间
+ 367   1      }
+ 368          
+ 369          /*****************************************************
+ 370          函数功能：做好读温度的准备
+ 371          ***************************************************/ 
+ 372          void ReadyReadTemp(void)
+ 373          {
+ 374   1            Init_DS18B20();     //将DS18B20初始化
+ 375   1          WriteOneChar(0xCC); // 跳过读序号列号的操作
+ 376   1          WriteOneChar(0x44); // 启动温度转换   
+ 377   1              v_DelayMs_f(200); //转换一次需要延时一段时间 
+ 378   1        
+ 379   1          Init_DS18B20();     //将DS18B20初始化
+ 380   1          WriteOneChar(0xCC); //跳过读序号列号的操作
+ 381   1          WriteOneChar(0xBE); //读取温度寄存器,前两个分别是温度的低位和高位 
+ 382   1      }
+ 383          
+ 384          
+ 385          void main()
+ 386          {
+ 387   1        unsigned char TL;     //储存暂存器的温度低位
+ 388   1           unsigned char TH;    //储存暂存器的温度高位
+ 389   1           unsigned char TN;      //储存温度的整数部分
+ 390   1          unsigned char TD;       //储存温度的小数部分
+ 391   1        
+ 392   1        uchar status;
+ 393   1        uchar fifo_s;
+ 394   1      uchar i;
+ 395   1        
+ 396   1        uchar TxBuf[32];
+ 397   1        
+ 398   1      
+ 399   1        
+ 400   1      v_DelayMs_f(100);
+ 401   1      v_Lcd12864Init_f() ;
+ 402   1      v_Lcd12864SendCmd_f(0x01) ;
+ 403   1      v_DelayMs_f(2);
+ 404   1      v_Lcd12864PutString_f(0,0,"nRF24L01发射测试");
+ 405   1      v_Lcd12864PutString_f(0,1,"STA:");
+ 406   1      v_Lcd12864PutString_f(0,2,"FIF:");
+ 407   1      init_NRF24L01();
+ 408   1      i=1;
+ 409   1        
+ 410   1      
+ 411   1        while(1)
+ 412   1      {
+ 413   2        flag=0;
+ 414   2          ReadyReadTemp();     //读温度准备
+ 415   2      
+ 416   2            TL=ReadOneChar();    //先读的是温度值低位
+ 417   2          TH=ReadOneChar();    //接着读的是温度值高位
+ 418   2        if((TH&0xf8)!=0x00)//判断高五位 得到温度正负标志
+ 419   2          {
+ 420   3          flag=1;
+ 421   3          TL=~TL;  //取反
+ 422   3          TH=~TH;   //取反
+ 423   3          tltemp=TL+1; //低位加1
+ 424   3          TL=tltemp;
+ 425   3          if(tltemp>255) TH++;  //如果低8位大于255，向高8位进1
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:16:35 PAGE 8   
+
+ 426   3           TN=TH*16+TL/16;      //实际温度值=(TH*256+TL)/16,即：TH*16+TL/16
+ 427   3                                //这样得出的是温度的整数部分,小数部分被丢弃了
+ 428   3           TD=(TL%16)*10/16;    //计算温度的小数部分,将余数乘以10再除以16取整，
+ 429   3          }
+ 430   2          TN=TH*16+TL/16;      //实际温度值=(TH*256+TL)/16,即：TH*16+TL/16
+ 431   2                                //这样得出的是温度的整数部分,小数部分被丢弃了
+ 432   2           TD=(TL%16)*10/16;    //计算温度的小数部分,将余数乘以10再除以16取整，
+ 433   2                              //这样得到的是温度小数部分的第一位数字(保留1位小数)
+ 434   2        
+ 435   2        TxBuf[0]=TN;
+ 436   2        TxBuf[1]=TD;
+ 437   2        TxBuf[2]=i;   
+ 438   2        v_Lcd12864PutString_f(0,3,uchartostr(TN));  
+ 439   2        v_Lcd12864PutString_f(1,3,"."); 
+ 440   2          v_Lcd12864PutString_f(2,3,uchartostr(TD));
+ 441   2      v_Lcd12864PutString_f(3,3,"℃");      
+ 442   2          
+ 443   2        SPI_RW_Reg(WRITE_REG+STATUS,0XFF);
+ 444   2        SPI_RW_Reg(FLUSH_TX,0XFF);
+ 445   2          status=SPI_READ_Reg(STATUS);
+ 446   2        fifo_s=SPI_READ_Reg(FIFO_STATUS);
+ 447   2        v_Lcd12864PutString_f(2,1,uchartostr(status));
+ 448   2        v_Lcd12864PutString_f(2,2,uchartostr(fifo_s));
+ 449   2        nRF24L01_TxPacket(TxBuf);
+ 450   2        v_DelayMs_f(200);
+ 451   2        status=SPI_READ_Reg(STATUS);
+ 452   2        fifo_s=SPI_READ_Reg(FIFO_STATUS);
+ 453   2        v_Lcd12864PutString_f(4,1,uchartostr(status));
+ 454   2        v_Lcd12864PutString_f(4,2,uchartostr(fifo_s));
+ 455   2        v_Lcd12864PutString_f(6,1,"TX_N");//发送次数
+ 456   2        v_Lcd12864PutString_f(6,2,uchartostr(i));
+ 457   2        v_DelayMs_f(1000);
+ 458   2        v_Lcd12864PutString_f(2,1,"        ");
+ 459   2        v_Lcd12864PutString_f(2,2,"        ");
+ 460   2        i++;
+ 461   2        if(i==255) i=1;
+ 462   2        v_DelayMs_f(600);
+ 463   2        }
+ 464   1      }
+*** WARNING C290 IN LINE 367 OF nRF24L01 发送.c: missing return value
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1239    ----
+   CONSTANT SIZE    =     46    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     18      59
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

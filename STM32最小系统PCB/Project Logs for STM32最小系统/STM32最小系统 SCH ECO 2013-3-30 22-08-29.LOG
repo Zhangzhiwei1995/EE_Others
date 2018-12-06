@@ -1,0 +1,55 @@
+Remove Pin=JTAG-15 From Net=RESET
+Remove Pin=P1-1 From Net=PB9
+Remove Pin=P1-2 From Net=PB8
+Remove Pin=P1-3 From Net=PB7
+Remove Pin=P1-4 From Net=PB6
+Remove Pin=P1-5 From Net=PB5
+Remove Pin=P1-6 From Net=JTRST
+Remove Pin=P1-7 From Net=JTDO
+Remove Pin=P1-8 From Net=PG15
+Remove Pin=P1-9 From Net=PG14
+Remove Pin=P1-10 From Net=PG13
+Remove Pin=P1-11 From Net=FSMC NE4
+Remove Pin=P1-12 From Net=PG11
+Remove Pin=P1-13 From Net=PG10
+Remove Pin=P1-14 From Net=PG9
+Remove Pin=P1-15 From Net=PD7
+Remove Pin=P1-16 From Net=PD6
+Remove Pin=P1-17 From Net=FSMC NWE
+Remove Pin=P1-18 From Net=FSMC NOE
+Remove Pin=P1-19 From Net=PD3
+Remove Pin=P1-20 From Net=PD2
+Remove Pin=P1-21 From Net=FSMC D3
+Remove Pin=P1-22 From Net=FSMC D2
+Remove Pin=P1-23 From Net=PC12
+Remove Pin=P1-24 From Net=PC11
+Remove Pin=P1-25 From Net=PC10
+Remove Pin=P1-26 From Net=JTDI
+Remove Pin=P1-27 From Net=JTCK
+Remove Pin=P1-28 From Net=JTMS
+Remove Pin=P1-29 From Net=PA12
+Remove Pin=P1-30 From Net=PA11
+Remove Pin=P1-31 From Net=PA8
+Remove Pin=P1-32 From Net=PC9
+Remove Pin=P1-33 From Net=PC8
+Remove Pin=P1-34 From Net=PC7
+Remove Pin=P1-35 From Net=PC6
+Remove Pin=P1-36 From Net=PG8
+Remove Pin=P1-37 From Net=PG7
+Remove Pin=P1-38 From Net=PG6
+Remove Pin=P1-39 From Net=PG5
+Remove Pin=P1-40 From Net=PG4
+Remove Pin=P1-41 From Net=PG3
+Remove Pin=P1-42 From Net=PG2
+Remove Pin=P1-43 From Net=FSMC_D1
+Remove Pin=P1-44 From Net=FSMC_D0
+Remove Pin=P1-45 From Net=PD13
+Remove Pin=P1-46 From Net=PD12
+Remove Pin=P1-47 From Net=PD11
+Remove Pin=P1-48 From Net=FSMC_D15
+Remove Pin=P1-49 From Net=FSMC_D14
+Remove Pin=P1-50 From Net=FSMC_D13
+Remove Pin=P1-51 From Net=PB15
+Remove Pin=P1-52 From Net=PB14
+Remove Pin=P1-53 From Net=PB13
+Remove Pin=P1-54 From Net=PB12

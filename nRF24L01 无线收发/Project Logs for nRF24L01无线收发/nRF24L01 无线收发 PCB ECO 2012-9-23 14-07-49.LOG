@@ -1,0 +1,10 @@
+Added Component: Designator=X2(nRF24L01模块)
+Added Pin To Net: NetName=GND Pin=X2-0
+Added Pin To Net: NetName=NetR1_2 Pin=X2-1
+Added Pin To Net: NetName=NetR2_2 Pin=X2-2
+Added Pin To Net: NetName=NetR3_2 Pin=X2-3
+Added Pin To Net: NetName=3.3V Pin=X2-4
+Added Pin To Net: NetName=NetR4_2 Pin=X2-5
+Added Pin To Net: NetName=NetR5_2 Pin=X2-6
+Added Pin To Net: NetName=NetR6_2 Pin=X2-7
+Added Member To Class: ClassName=nRF24L01 无线收发 Member=Component X2 nRF24L01 模块

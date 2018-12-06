@@ -1,0 +1,912 @@
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 1   
+
+
+C51 COMPILER V9.50a, COMPILATION OF MODULE SHUKONGDIANYUAN
+OBJECT MODULE PLACED IN shukongdianyuan.OBJ
+COMPILER INVOKED BY: D:\Program Files\Keil\C51\BIN\C51.EXE shukongdianyuan.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <reg52.h>
+   2          #include <intrins.h>
+   3          
+   4          #define uchar unsigned char
+   5          
+   6          #define lcd12864_dataport P0    //P0为12864数据口
+   7          #define keyboard_dataport P2    //P2为键盘数据口
+   8          #define dac0832_dataport P1                     //P1为dac0832数据口
+   9          
+  10          sbit RS = P3^0 ;        //12864 数据命令选择端
+  11          sbit RW = P3^1 ;        //12864 读写选择端
+  12          sbit EN = P3^4 ;        //12864 12864使能信号
+  13          
+  14          sbit CLK=P3^5;
+  15          sbit DAT=P3^6;
+  16          sbit CS=P3^7;
+  17          
+  18          uchar   h=0;
+  19          
+  20          unsigned int t=0;
+  21          
+  22          
+  23          
+  24          #define SET_DATA  RS = 1 ;              //写命令
+  25          #define SET_INC  RS = 0 ;               //写指令
+  26          #define SET_READ  RW = 1 ;              //读
+  27          #define SET_WRITE RW = 0 ;              //写
+  28          #define SET_EN    EN = 1 ;              //使能开
+  29          #define CLR_EN    EN = 0 ;              //使能关
+  30          
+  31          bit keyboard_flag=0;                    //键盘处理标志  0为空闲         1为请求处理
+  32          uchar dac0832=100;                                              //二进制da数据
+  33          uchar tlc549_data;                                              //二进制ad数据
+  34          uchar e=0;                                              //保存预设电压的整数部分
+  35          uchar f=0;                                              //保存预设电压的小数部分
+  36          
+  37          
+  38          uchar code figure[]="0123456789";
+  39          
+  40          //所有函数声明
+  41          void delaynms(uchar n);
+  42          uchar v_process_1(uchar data_16);
+  43          uchar v_process_2(uchar data_10);
+  44          uchar keyboard_scan();
+  45          void keyboard_process(uchar x);
+  46          bit yushe_process_1(void);
+  47          bit yushe_process_2(void);
+  48          void lcd12864checkbusy( void ) ;
+  49          void lcd12864sendcmd( unsigned char byCmd );
+  50          void lcd12864senddata( unsigned char byData )  ; 
+  51          void lcd12864init( void ) ;
+  52          void lcd12864setaddress( unsigned char x, y ) ;
+  53          void lcd12864putstring( unsigned char x, unsigned char y, unsigned char *pData );
+  54          void lcd12864putchar( unsigned char x, unsigned char y, unsigned char asic );
+  55          void lcd12864display_1(void);
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 2   
+
+  56          void lcd12864display_2(uchar x,y);
+  57          uchar TLC549();
+  58          
+  59          
+  60          
+  61          //*************************************
+  62          //              n毫秒延时程序 入口参数:n
+  63          //*************************************
+  64          void delaynms(uchar n)
+  65          {
+  66   1              uchar i;
+  67   1              while(n--)
+  68   1                      for(i=120;i>0;i--);     
+  69   1      }
+  70          
+  71          
+  72          //******************************************************************************************************
+  73          //              电压计算函数            入口参数:data_16                 出口参数:data_10
+  74          //******************************************************************************************************
+  75          uchar v_process_1(uchar data_16)
+  76          {
+  77   1              uchar data_10;
+  78   1              data_10=data_16*100/200;
+  79   1              return data_10;
+  80   1      }
+  81          
+  82          //******************************************************************************************************
+  83          //              预设电压转二进制函数    入口参数:data_10          出口参数:data_16
+  84          //******************************************************************************************************
+  85          uchar v_process_2(uchar data_10)
+  86          {
+  87   1              uchar data_16;
+  88   1              data_16=data_10*200/100;
+  89   1              return data_16;
+  90   1      }
+  91          
+  92          /*
+  93          //**********************************************************
+  94          //              矩阵键盘扫描程序        出口参数：键值num 对应16个按键
+  95          //**********************************************************
+  96          uchar keyboard_scan()
+  97          {                       
+  98                                  uchar num,temp;
+  99                                  //检测第一行
+ 100                                  keyboard_dataport=0xfe;
+ 101                                  temp=keyboard_dataport;
+ 102                                  temp=temp&0xf0;
+ 103                                  while(temp!=0xf0)               //当有按键按下
+ 104                                          {
+ 105                                                  delaynms(15);           //延时消抖
+ 106                                                  temp=keyboard_dataport;
+ 107                                                  temp=temp&0xf0;
+ 108                                                  while(temp!=0xf0)       //确认有按键按下
+ 109                                                  {
+ 110                                                          temp=keyboard_dataport;
+ 111                                                  switch(temp)
+ 112                                                          {
+ 113                                                                  case 0xee:num=1;                //第一行第一列
+ 114                                                                          break;
+ 115                                                                  case 0xde:num=2;        //第一行第二列
+ 116                                                                          break;
+ 117                                                                  case 0xbe:num=3;                //第一行第三列
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 3   
+
+ 118                                                                          break;
+ 119                                                                  case 0x7e:num=4;                //第一行第四列
+ 120                                                                          break;
+ 121                                                          }
+ 122                                                  while(temp!=0xf0)                               //等待按键释放
+ 123                                                          {
+ 124                                                                  temp=keyboard_dataport;
+ 125                                                                  temp=temp&0xf0;
+ 126                                                          }
+ 127                                                  }
+ 128                                          }
+ 129                                  //检测第二行
+ 130                                  P3=0xfd;
+ 131                                  temp=keyboard_dataport;
+ 132                                  temp=temp&0xf0;
+ 133                                  while(temp!=0xf0)                               //有按键按下
+ 134                                          {
+ 135                                                  delaynms(15);
+ 136                                                  temp=keyboard_dataport;
+ 137                                                  temp=temp&0xf0;
+ 138                                                  while(temp!=0xf0)
+ 139                                                  {
+ 140                                                          temp=keyboard_dataport;
+ 141                                                  switch(temp)
+ 142                                                          {
+ 143                                                                  case 0xed:num=5;        //第二行第一列
+ 144                                                                          break;
+ 145                                                                  case 0xdd:num=6;        //第二行第二列
+ 146                                                                          break;
+ 147                                                                  case 0xbd:num=7;        //第二行第三列
+ 148                                                                          break;
+ 149                                                                  case 0x7d:num=8;        //第二行第四列
+ 150                                                                          break;
+ 151                                                          }
+ 152                                                  while(temp!=0xf0)                       //等待按键释放
+ 153                                                          {
+ 154                                                                  temp=keyboard_dataport;
+ 155                                                                  temp=temp&0xf0;
+ 156                                                          }
+ 157                                                  }
+ 158                                          }
+ 159          
+ 160                                  //检测第三行
+ 161                                  keyboard_dataport=0xfb;
+ 162                                  temp=keyboard_dataport;
+ 163                                  temp=temp&0xf0;
+ 164                                  while(temp!=0xf0)
+ 165                                          {
+ 166                                                  delaynms(15);
+ 167                                                  temp=keyboard_dataport;
+ 168                                                  temp=temp&0xf0;
+ 169                                                  while(temp!=0xf0)
+ 170                                                  {
+ 171                                                          temp=P3;
+ 172                                                  switch(temp)
+ 173                                                          {
+ 174                                                                  case 0xeb:num=9;
+ 175                                                                          break;
+ 176                                                                  case 0xdb:num=10;
+ 177                                                                          break;
+ 178                                                                  case 0xbb:num=11;
+ 179                                                                          break;
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 4   
+
+ 180                                                                  case 0x7b:num=12;
+ 181                                                                          break;
+ 182                                                          }
+ 183                                                  while(temp!=0xf0)               //等待按键释放
+ 184                                                          {
+ 185                                                                  temp=keyboard_dataport;
+ 186                                                                  temp=temp&0xf0;
+ 187                                                          }
+ 188                                                  }
+ 189                                          }
+ 190          
+ 191                                  //检测第四行
+ 192                                  keyboard_dataport=0xf7;
+ 193                                  temp=keyboard_dataport;
+ 194                                  temp=temp&0xf0;
+ 195                                  while(temp!=0xf0)
+ 196                                          {
+ 197                                                  delaynms(5);
+ 198                                                  temp=keyboard_dataport;
+ 199                                                  temp=temp&0xf0;
+ 200                                                  while(temp!=0xf0)
+ 201                                                  {
+ 202                                                          temp=keyboard_dataport;
+ 203                                                  switch(temp)
+ 204                                                          {
+ 205                                                                  case 0xe7:num=13;
+ 206                                                                          break;
+ 207                                                                  case 0xd7:num=14;
+ 208                                                                          break;
+ 209                                                                  case 0xb7:num=15;
+ 210                                                                          break;
+ 211                                                                  case 0x77:num=16;
+ 212                                                                          break;
+ 213                                                          }
+ 214                                                  while(temp!=0xf0)                       //等待按键释放
+ 215                                                          {
+ 216                                                                  temp=keyboard_dataport;
+ 217                                                                  temp=temp&0xf0;
+ 218                                                          }
+ 219                                                  }
+ 220                                          }
+ 221                                  lcd12864putchar(0,2,num+48);
+ 222                                  return num;
+ 223                                          
+ 224          
+ 225          }
+ 226          
+ 227          */
+ 228          
+ 229          //*******************************************************
+ 230          //              矩阵键盘扫描程序        出口参数：键值x 对应16个按键
+ 231          //*******************************************************
+ 232          uchar keyboard_scan(void)
+ 233          {
+ 234   1              uchar x=0;                      //键值x
+ 235   1              uchar temp=0;           //寄存键盘数据状态
+ 236   1              
+ 237   1      //      lcd12864putstring(0,2,"键盘扫描");
+ 238   1              
+ 239   1      //      keyboard_dataport=0xff;                 //键盘数据口进入读状态
+ 240   1              
+ 241   1              keyboard_dataport=0Xf0;         
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 5   
+
+ 242   1              temp=keyboard_dataport; 
+ 243   1              
+ 244   1              
+ 245   1              if(temp!=0xf0)          //有按键按下
+ 246   1              { 
+ 247   2                      delaynms(5);            //消抖延时
+ 248   2                      if(temp!=0xf0)
+ 249   2                      { 
+ 250   3                              keyboard_dataport=0xfe;         //检查第四列
+ 251   3                              temp=keyboard_dataport;
+ 252   3                              switch(temp) 
+ 253   3                              { 
+ 254   4                                      case(0xee):{x=16;break; }       //第四列第四个键
+ 255   4                                      case(0xde):{x=12;break;         }//第四列第三个键
+ 256   4                                      case(0xbe):{x=8;break;  }//第四列第二个键
+ 257   4                                      case(0x7e):{x=4;break;  }//第四列第一个键
+ 258   4      
+ 259   4                              }
+ 260   3      
+ 261   3                              keyboard_dataport=0xfd; //检查第三列
+ 262   3                              temp=keyboard_dataport;
+ 263   3                              switch(temp) 
+ 264   3                              { 
+ 265   4                                      case(0xed):{x=15;break; }
+ 266   4                                      case(0xdd):{x=11;break; }
+ 267   4                                      case(0xbd):{x=7;break; }
+ 268   4                                      case(0x7d):{x=3;break; }
+ 269   4                              }
+ 270   3      
+ 271   3                              keyboard_dataport=0xfb; //检查第二列
+ 272   3                              temp=keyboard_dataport;
+ 273   3                              switch(temp) 
+ 274   3                              { 
+ 275   4                                      case(0xeb):{x=14;break; }
+ 276   4                                      case(0xdb):{x=10;break; }
+ 277   4                                      case(0xbb):{x=6;break; }
+ 278   4                                      case(0x7b):{x=2;
+ 279   5      //                              while(temp!=0xf0)                               //等待按键释放
+ 280   5      //              {
+ 281   5      //                                      temp=keyboard_dataport;
+ 282   5      //                                      temp=temp&0xf0;
+ 283   5      //                      }
+ 284   5      
+ 285   5                                      break; }
+ 286   4                              }
+ 287   3      
+ 288   3                              keyboard_dataport=0xf7; //检查第一列
+ 289   3                              temp=keyboard_dataport;
+ 290   3                              switch(temp) 
+ 291   3                              { 
+ 292   4                                      case(0xe7):{x=13;break; }
+ 293   4                                      case(0xd7):{x=9;break; }
+ 294   4                                      case(0xb7):{x=5;;break; }
+ 295   4                                      case(0x77):{x=1;
+ 296   5                      /*      while(temp!=0xf0)                               //等待按键释放
+ 297   5                              {
+ 298   5                                              temp=keyboard_dataport;
+ 299   5                                              temp=temp&0xf0;
+ 300   5                              }
+ 301   5                      */
+ 302   5                              break; }
+ 303   4                              }
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 6   
+
+ 304   3                      } 
+ 305   2                      while(temp!=0xf0)                               //等待按键释放
+ 306   2                              {
+ 307   3                                              temp=keyboard_dataport;
+ 308   3                                              temp=temp&0xf0;
+ 309   3                              } 
+ 310   2              
+ 311   2         } 
+ 312   1         
+ 313   1       /*  if(temp!=0xf0)             //有按键按下
+ 314   1              { 
+ 315   1                      delaynms(3);            //消抖延时
+ 316   1                      if(temp!=0xf0)
+ 317   1                      { 
+ 318   1                      
+ 319   1      
+ 320   1                              keyboard_dataport=0xfb; //检查第二列
+ 321   1                              temp=keyboard_dataport;
+ 322   1                              switch(temp) 
+ 323   1                              { 
+ 324   1                                      
+ 325   1                                      case(0x7b):{x=2;break; }
+ 326   1                              }
+ 327   1      
+ 328   1                              keyboard_dataport=0xf7; //检查第一列
+ 329   1                              temp=keyboard_dataport;
+ 330   1                              switch(temp) 
+ 331   1                              { 
+ 332   1                                      case(0x77):{x=1;break; }
+ 333   1                              }
+ 334   1                      } 
+ 335   1                      while(temp!=0xf0)                               //等待按键释放
+ 336   1                              {
+ 337   1                                              temp=keyboard_dataport;
+ 338   1                                              temp=temp&0xf0;
+ 339   1                              }
+ 340   1              
+ 341   1         } 
+ 342   1         
+ 343   1       */  
+ 344   1       //  lcd12864putchar(4,2,x+48);
+ 345   1         return x;    
+ 346   1      }
+ 347          
+ 348          
+ 349          //*******************************************************
+ 350          //              矩阵键盘处理程序        入口参数：按键键值x
+ 351          //*******************************************************
+ 352          void keyboard_process(uchar x)
+ 353          {
+ 354   1      //      lcd12864putstring(0,3,"键盘处理");
+ 355   1              switch(x) 
+ 356   1              { 
+ 357   2                      case(1):
+ 358   2                      {
+ 359   3                              if(dac0832>=198)
+ 360   3                              break;
+ 361   3                              dac0832=dac0832+20;
+ 362   3                              break; 
+ 363   3                      }                       //启动定时器0 进行自加 或者关闭定时器0 停止自加
+ 364   2                      case(2):
+ 365   2                              {
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 7   
+
+ 366   3                              if(dac0832<=0x01)
+ 367   3                              break;
+ 368   3                              dac0832=dac0832-20;
+ 369   3                              break; 
+ 370   3                              }                          //启动定时器1 进行自减 或者关闭定时器1 停止自减
+ 371   2                      case(3):
+ 372   2                              {if(dac0832>=198)
+ 373   3                              break;
+ 374   3                              dac0832=dac0832+2;
+ 375   3                              break; 
+ 376   3                              }                               //      电压值+0.1
+ 377   2                      case(4):
+ 378   2                              {
+ 379   3                              if(dac0832<=01)
+ 380   3                              break;
+ 381   3                              dac0832=dac0832-2;
+ 382   3                              break; 
+ 383   3                              }                               //      电压值-0.1
+ 384   2              
+ 385   2                      case(5):{TR0=~TR0 ;if(dac0832>=198) dac0832=198;
+ 386   3                              break;  }
+ 387   2                      case(6): {TR1=~TR1;if(dac0832<=01) dac0832=01;break;    }
+ 388   2              //      case(7): ;break;        
+ 389   2      //              case(8):                                                        //进入设置状态
+ 390   2      //                      while (! yushe_process_1()){;}
+ 391   2      //                      while (! yushe_process_2()){;}
+ 392   2      //                      break;  
+ 393   2              //      case(9): ;break;        
+ 394   2              //      case(10): ;break;       
+ 395   2              //      case(11): ;break;       
+ 396   2      //              case(12):dac0832=v_process_2(e*10+f);break;                                     //确定按钮
+ 397   2              //      case(13): ;break;       
+ 398   2              //      case(14): ;break;       
+ 399   2              //      case(15):x=8;break;     
+ 400   2              //      case(16):x=4;break;     
+ 401   2      
+ 402   2              }
+ 403   1              
+ 404   1      
+ 405   1      }
+ 406          
+ 407          //*********************************************************
+ 408          //              预设电压整数位处理程序  出口参数:flag 处理完成标志
+ 409          //*********************************************************
+ 410          bit yushe_process_1(void)
+ 411          {
+ 412   1              bit     flag=0;
+ 413   1              uchar   j;
+ 414   1              j=keyboard_scan();
+ 415   1              switch(j)
+ 416   1              {
+ 417   2                      
+ 418   2                      case(5):e=1;flag=1;break;
+ 419   2                      case(6):e=2;flag=1;break;
+ 420   2                      case(7):e=3;flag=1;break;
+ 421   2                      case(9):e=4;flag=1;break;
+ 422   2                      case(10):e=5;flag=1;break;
+ 423   2                      case(11):e=6;flag=1;break;
+ 424   2                      case(13):e=7;flag=1;break;
+ 425   2                      case(14):e=8;flag=1;break;
+ 426   2                      case(15):e=9;flag=1;break;
+ 427   2                      case(16):e=0;flag=1;break;
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 8   
+
+ 428   2              }
+ 429   1              
+ 430   1              return flag;
+ 431   1      }
+ 432          
+ 433          //*********************************************************
+ 434          //              预设电压小数位位处理程序        出口参数:flag 处理完成标志
+ 435          //*********************************************************
+ 436          bit yushe_process_2(void)
+ 437          {
+ 438   1              bit     flag=0;
+ 439   1              uchar   j;
+ 440   1              j=keyboard_scan();
+ 441   1              switch(j)
+ 442   1              {
+ 443   2                      
+ 444   2                      case(5):f=1;flag=1;break;
+ 445   2                      case(6):f=2;flag=1;break;
+ 446   2                      case(7):f=3;flag=1;break;
+ 447   2                      case(9):f=4;flag=1;break;
+ 448   2                      case(10):f=5;flag=1;break;
+ 449   2                      case(11):f=6;flag=1;break;
+ 450   2                      case(13):f=7;flag=1;break;
+ 451   2                      case(14):f=8;flag=1;break;
+ 452   2                      case(15):f=9;flag=1;break;
+ 453   2                      case(16):f=0;flag=1;break;
+ 454   2              }
+ 455   1              return flag;
+ 456   1      
+ 457   1      }
+ 458          
+ 459          
+ 460          
+ 461          
+ 462          //*******************************************************
+ 463          //              12864检测盲信号函数
+ 464          //*******************************************************
+ 465          
+ 466          void lcd12864checkbusy( void )      
+ 467          {
+ 468   1          unsigned int nTimeOut = 0 ;
+ 469   1          SET_INC
+ 470   1          SET_READ
+ 471   1          CLR_EN
+ 472   1          SET_EN
+ 473   1          while( ( lcd12864_dataport & 0x80 ) && ( ++nTimeOut != 0 ) ) ; //最高位为0时表允许
+ 474   1          CLR_EN
+ 475   1          SET_INC
+ 476   1          SET_READ
+ 477   1      }
+ 478          
+ 479          //*******************************************************
+ 480          //              12864发送命令函数       入口参数：byCmd （命令代码） 
+ 481          //*******************************************************
+ 482          void lcd12864sendcmd( unsigned char byCmd )      
+ 483          {
+ 484   1          lcd12864checkbusy() ;
+ 485   1          SET_INC
+ 486   1          SET_WRITE
+ 487   1          CLR_EN
+ 488   1          lcd12864_dataport = byCmd ;
+ 489   1          _nop_();
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 9   
+
+ 490   1          _nop_();
+ 491   1          SET_EN  
+ 492   1          _nop_();
+ 493   1          _nop_();
+ 494   1          CLR_EN
+ 495   1          SET_READ
+ 496   1          SET_INC
+ 497   1      }
+ 498          
+ 499          
+ 500          //*******************************************************
+ 501          //              12864发送信号函数       入口参数：byData（数据代码） 
+ 502          //*******************************************************
+ 503          void lcd12864senddata( unsigned char byData )    
+ 504          {
+ 505   1          lcd12864checkbusy() ;
+ 506   1          SET_DATA
+ 507   1          SET_WRITE
+ 508   1          CLR_EN
+ 509   1          lcd12864_dataport= byData ;
+ 510   1          _nop_();
+ 511   1          _nop_();
+ 512   1          SET_EN  
+ 513   1          _nop_();
+ 514   1          _nop_();
+ 515   1          CLR_EN
+ 516   1          SET_READ
+ 517   1          SET_INC
+ 518   1      }
+ 519          
+ 520          //*******************************************************
+ 521          //              12864初始化函数 
+ 522          //*******************************************************
+ 523          void lcd12864init( void )                  //初始化
+ 524          {
+ 525   1          lcd12864sendcmd( 0x30 ) ;              //基本指令集  功能设定 8位数据 无扩充指令
+ 526   1          delaynms( 50 ) ;
+ 527   1          lcd12864sendcmd( 0x01 ) ;              //清屏
+ 528   1          delaynms( 50 ) ;
+ 529   1          lcd12864sendcmd( 0x06 ) ;              //光标右移
+ 530   1          delaynms( 50 ) ;
+ 531   1          lcd12864sendcmd( 0x0c ) ;              //开显示 关游标
+ 532   1      }
+ 533          
+ 534          //*******************************************************************
+ 535          //              12864地址设置函数       入口参数：x,y   x是列数，y是行数 共8列4行
+ 536          //*******************************************************************
+ 537          void lcd12864setaddress( unsigned char x, y ) 
+ 538          {
+ 539   1          unsigned char byAddress ;
+ 540   1          switch( y )
+ 541   1          {
+ 542   2              case 0 :    byAddress = 0x80 + x ;
+ 543   2                  break;
+ 544   2              case 1 :    byAddress = 0x90 + x ;
+ 545   2                  break ;
+ 546   2              case 2 :    byAddress = 0x88 + x ;
+ 547   2                  break ;
+ 548   2              case 3 :    byAddress = 0x98 + x ;
+ 549   2                  break ;
+ 550   2              default :
+ 551   2                  break ;
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 10  
+
+ 552   2          }
+ 553   1          lcd12864sendcmd( byAddress ) ;
+ 554   1      }
+ 555          
+ 556          
+ 557          //***********************************************************************************************
+ 558          //              12864字符串显示函数     入口参数：x,y，*pData   x是列数，y是行数 共8列4行 *pData指向字符串
+ 559          //***********************************************************************************************
+ 560          void lcd12864putstring( unsigned char x, unsigned char y, unsigned char *pData )
+ 561          {
+ 562   1          lcd12864setaddress( x, y ) ;
+ 563   1          while( *pData != '\0' )
+ 564   1          {
+ 565   2              lcd12864senddata( *pData++ ) ;
+ 566   2          }            
+ 567   1      
+ 568   1      }
+ 569          
+ 570          //***********************************************************************************************
+ 571          //              12864字符显示函数       入口参数：x,y，asiic    x是列数，y是行数 共8列4行 asiic是要写的字符的asiic码
+ 572          //***********************************************************************************************
+ 573          void lcd12864putchar( unsigned char x, unsigned char y, unsigned char asic )
+ 574          {
+ 575   1          lcd12864setaddress( x, y ) ;
+ 576   1          
+ 577   1          lcd12864senddata( asic ) ;
+ 578   1      }
+ 579          
+ 580          
+ 581          //***********************************************************************************************
+ 582          //              12864常量显示函数       用于显示汉字说明等内容
+ 583          //***********************************************************************************************
+ 584          void lcd12864display_1(void)
+ 585          {
+ 586   1                      lcd12864putstring(0,0,"理想电压:");
+ 587   1                       delaynms( 300 ) ;
+ 588   1                      lcd12864putstring(0,1,"实际电压:");
+ 589   1                       delaynms( 300 ) ;
+ 590   1      }
+ 591          
+ 592          //******************************************************************************************************
+ 593          //              12864变量显示函数       用于显示理想电压和实际电压的数值        入口参数:x,y    x为理想输出电压 y为实际测量电压
+ 594          //******************************************************************************************************
+ 595          void lcd12864display_2(uchar x,y)
+ 596          {
+ 597   1              uchar a,b,c,d;
+ 598   1              a=x/10;
+ 599   1              b=x%10;
+ 600   1              lcd12864putchar(6,0,figure[a]);
+ 601   1              lcd12864senddata( '.' ) ;
+ 602   1              lcd12864senddata( figure[b]) ;
+ 603   1              lcd12864senddata( 'V' ) ;
+ 604   1              
+ 605   1              c=y/10;
+ 606   1              d=y%10;
+ 607   1              lcd12864putchar(6,1,figure[c]);
+ 608   1              lcd12864senddata( '.' ) ;
+ 609   1              lcd12864senddata( figure[d]) ;
+ 610   1              lcd12864senddata( 'V' ) ;
+ 611   1              
+ 612   1              
+ 613   1              
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 11  
+
+ 614   1              
+ 615   1      }
+ 616          
+ 617          
+ 618          
+ 619          
+ 620          //*******************************************
+ 621          //读ad函数              出口参数：16进制ad输出值
+ 622          //*******************************************
+ 623          uchar TLC549()
+ 624          {
+ 625   1              unsigned i,tmp;
+ 626   1              CS=1;
+ 627   1              CLK=0;
+ 628   1              CS=0;
+ 629   1              _nop_();
+ 630   1              _nop_();
+ 631   1              for(i=0;i<8;i++)
+ 632   1              {
+ 633   2                      tmp<<=1;                //左移一位
+ 634   2                      tmp|=DAT;
+ 635   2                      CLK=1;
+ 636   2                      _nop_();
+ 637   2                      CLK=0;
+ 638   2                  
+ 639   2              }
+ 640   1              CS=1;
+ 641   1              for(i=17;i>0;i--)
+ 642   1              _nop_();
+ 643   1              return(tmp);
+ 644   1      }
+ 645          
+ 646          
+ 647          
+ 648          //*******************************************
+ 649          //                      函数功能：主函数
+ 650          //*******************************************
+ 651          void main(void)
+ 652          {
+ 653   1              dac0832_dataport=dac0832;
+ 654   1              
+ 655   1              
+ 656   1              lcd12864init();                         //12864初始化
+ 657   1              lcd12864display_1();            //12864显示静态内容
+ 658   1              
+ 659   1              
+ 660   1              EX0=1;                                          //允许使用外中断0
+ 661   1      //      IT0=1;                                          //选择负跳变来触发外中断0
+ 662   1              
+ 663   1              EX1=1;                                          //允许使用外中断1
+ 664   1              IT1=1;                                          //选择负跳变来触发外中断1
+ 665   1              
+ 666   1              
+ 667   1              //定时器0、1设置                用于控制输出电压自动加或者自动减
+ 668   1              TMOD=0x11;            //使用定时器T0 T1的模式1  16位
+ 669   1      
+ 670   1              TH0=(65536-50)/256;  //定时器T0的高8位赋初值
+ 671   1              TL0=(65536-50)%256;  //定时器T0的低8位赋初值    计时50us
+ 672   1              ET0=1;                                          //允许定时器0中断
+ 673   1              TR0=0;                                  //关闭定时器0
+ 674   1              
+ 675   1              TH1=(65536-50)/256;  //定时器T1的高8位赋初值
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 12  
+
+ 676   1              TL1=(65536-50)%256;  //定时器T1的低8位赋初值    计时50us
+ 677   1              ET1=1;                                          //允许定时器1中断
+ 678   1              TR1=0;                                  //关闭定时器1
+ 679   1              
+ 680   1      /*      
+ 681   1              //定时器2设置   用于控制ad的采样频率    
+ 682   1              RCAP2H=(65536-50000)/256;;                              //定时器2初值  计时50000us              16位自动重装
+ 683   1              RCAP2L=(65536-50000)%256;                               //定时器2初值  计时50000us
+ 684   1              ET2=1;                                          // 允许T2定时器中断
+ 685   1              TR2=1;                                          // 启动T2定时器
+ 686   1      //      lcd12864putstring(0,2,"定时器中断已开");
+ 687   1              TH2=RCAP2H;                                     //定时器2赋初值  计时50us
+ 688   1              TL2=RCAP2L;                                     //定时器2赋初值  计时50us
+ 689   1              
+ 690   1      */
+ 691   1      
+ 692   1              EA=1;                                           //开放总中断
+ 693   1              
+ 694   1              keyboard_dataport=0x0f;
+ 695   1              
+ 696   1              
+ 697   1      
+ 698   1              while (1)
+ 699   1              {
+ 700   2                      if(keyboard_flag==1)            //请求处理键盘操作
+ 701   2                      {
+ 702   3              
+ 703   3                              keyboard_flag=0;                //取消键盘请求标志
+ 704   3                              keyboard_process(keyboard_scan());      //进行键盘按键操作
+ 705   3                              keyboard_dataport=0x0f;
+ 706   3                      }
+ 707   2                              
+ 708   2                      dac0832_dataport=dac0832;
+ 709   2                      
+ 710   2                      
+ 711   2                      tlc549_data=TLC549() ;
+ 712   2                      
+ 713   2                      h++;
+ 714   2                      if(h==10)
+ 715   2                      {
+ 716   3                              h=0;
+ 717   3                      lcd12864putstring(0,2,"                ");
+ 718   3                      lcd12864putstring(0,3,"                ");
+ 719   3                      }
+ 720   2                      
+ 721   2                      delaynms(10);
+ 722   2                      
+ 723   2                      
+ 724   2                      lcd12864display_2(v_process_1(dac0832),v_process_1(tlc549_data));
+ 725   2              }
+ 726   1                              
+ 727   1      }
+ 728          /*
+ 729          //***********************************************************************
+ 730          //                      函数功能：外中断T0的中断服务程序        用于进行过流保护
+ 731          //***********************************************************************
+ 732          void int0(void) interrupt 0 //外中断0的中断编号为0
+ 733          {
+ 734                  EX0=0;                          //关闭外中断0
+ 735                  
+ 736                  dac0832=0;
+ 737                  lcd12864putstring(0,2,"电流过大");
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 13  
+
+ 738                  delaynms( 1000 ) ;
+ 739                  lcd12864putstring(0,3,"已进行自动降压");
+ 740                  delaynms( 1000 ) ;
+ 741                  lcd12864putstring(0,2,"                                 ");
+ 742                  lcd12864putstring(0,3,"                                 ");
+ 743                  
+ 744                  EX0=1;                          //打开外中断0
+ 745          }
+ 746          */
+ 747          
+ 748          //***********************************************************************
+ 749          //                      函数功能：外中断T1的中断服务程序        用于检测键盘按键是否按下
+ 750          //***********************************************************************
+ 751          void int1(void) interrupt 2 //外中断1的中断编号为2
+ 752          {
+ 753   1              EX1=0;                          //关闭外中断0
+ 754   1              keyboard_flag=1;        //键盘处理标志置1
+ 755   1              EX1=1;                          //打开外中断0
+ 756   1              
+ 757   1      
+ 758   1      }
+ 759          
+ 760          
+ 761          //***************************************************************
+ 762          //                      函数功能：定时器0的中断服务程序 用于输出电压值自动加    
+ 763          //***************************************************************
+ 764          void timer0(void) interrupt 1 
+ 765          { 
+ 766   1              static uchar    m=0;
+ 767   1      //      static uchar    n=0;    
+ 768   1              TR0=0;                                  //关闭定时器0
+ 769   1              m++;
+ 770   1              if (m==2)                               //50us*20=1ms
+ 771   1              {
+ 772   2      
+ 773   2                dac0832=dac0832+2; //输出电压自加
+ 774   2                      
+ 775   2                      m=0;
+ 776   2      //        lcd12864display_2(dac0832,v_process_1(tlc549_data));
+ 777   2                      
+ 778   2              }
+ 779   1      
+ 780   1      //      if (n==1000)                            //100*1ms=0.1s
+ 781   1      //      {
+ 782   1                      
+ 783   1      //          dac0832++; //输出电压自加
+ 784   1      //              lcd12864display_2(dac0832,v_process_1(tlc549_data));
+ 785   1      //              n=0;
+ 786   1                      
+ 787   1      //      }
+ 788   1      
+ 789   1              
+ 790   1              TH0=(65536-50000)/256;
+ 791   1              TL0=(65536-50000)%256;
+ 792   1              TR0=1;                                  //打开定时器0
+ 793   1              
+ 794   1      }
+ 795          
+ 796          //***************************************************************
+ 797          //                      函数功能：定时器1的中断服务程序 用于输出电压值自动减
+ 798          //***************************************************************
+ 799          void timer1(void) interrupt 3
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 14  
+
+ 800          { 
+ 801   1              static uchar    p=0;
+ 802   1      //      static uchar    q=0;    
+ 803   1              TR1=0;                                  //关闭定时器1
+ 804   1              p++;
+ 805   1              if (p==2)                               //50us*20=1ms
+ 806   1              {
+ 807   2               
+ 808   2               dac0832=dac0832-2;                     //电压值自动
+ 809   2                      
+ 810   2                      p=0;
+ 811   2      //       lcd12864display_2(dac0832,v_process_1(tlc549_data));
+ 812   2                      
+ 813   2              
+ 814   2              }
+ 815   1      
+ 816   1      //      if (q==1000)                            //100*1ms=0.1s
+ 817   1      //      {
+ 818   1                      
+ 819   1      //              dac0832--;                      //电压值自动减
+ 820   1      //              lcd12864display_2(dac0832,v_process_1(tlc549_data));
+ 821   1      //              q=0;
+ 822   1      //              
+ 823   1      //      }
+ 824   1      
+ 825   1              TH1=(65536-50000)/256;
+ 826   1              TL1=(65536-50000)%256;
+ 827   1              TR1=1;                                  //打开定时器1
+ 828   1              
+ 829   1      }
+ 830          
+ 831          /*
+ 832          //***************************************************************
+ 833          //                      函数功能：定时器2的中断服务程序 用于控制ad的采样频率    
+ 834          //***************************************************************
+ 835          void timer2() interrupt 5
+ 836          {
+ 837                  static uchar  d1=0;
+ 838          
+ 839          //      static uchar  d2=0;;
+ 840          //      lcd12864putstring(0,3,"已进入定时器2");
+ 841                  
+ 842                  TF2=0;                                  //!!!注意!!! 定时器2必须由软件对溢出标志位清零，硬件不能清零，这里与定时器0和定时器1不同!!!
+ 843                  TR2=0;                                  //关闭定时器2
+ 844                  d1++;
+ 845                  if (d1==10)                             //50000us*10=0.5s
+ 846                  {
+ 847                   d1=0;
+ 848                   tlc549_data=TLC549() ; 
+ 849                   lcd12864display_2(v_process_1(dac0832),v_process_1(tlc549_data));
+ 850                  }
+ 851          //      if (d2==500)                            //500*1ms=0.5s
+ 852          //      {
+ 853          //              lcd12864putstring(0,3,"已进入定时器2中断");
+ 854          //              tlc549_data=TLC549() ;          //采样          采样频率  1秒2次
+ 855          //              d2=0;
+ 856          //      }
+ 857                  //定时器2能自动重装             不需再赋初值
+ 858                  TR2=1;                                  //打开定时器2
+ 859                  
+ 860          }
+ 861          */
+C51 COMPILER V9.50a   SHUKONGDIANYUAN                                                      08/27/2012 19:09:36 PAGE 15  
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1215    ----
+   CONSTANT SIZE    =     48    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      9       7
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1       2
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

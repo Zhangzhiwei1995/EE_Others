@@ -1,0 +1,11 @@
+Change Component Footprint: Designator=J1 Old Footprint=SIP-20 New Footprint=sip20
+Added Component: Designator=J2(SIP-1)
+Added Component: Designator=J3(SIP-1)
+Added Component: Designator=J4(SIP-1)
+Added Pin To Net: NetName=RS Pin=J2-1
+Added Pin To Net: NetName=RW Pin=J3-1
+Added Pin To Net: NetName=EN Pin=J4-1
+Added Member To Class: ClassName=12864 Member=Component J2 CON1
+Added Member To Class: ClassName=12864 Member=Component J3 CON1
+Added Member To Class: ClassName=12864 Member=Component J4 CON1
+Added Room: Name=12864

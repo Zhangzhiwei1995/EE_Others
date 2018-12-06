@@ -1,0 +1,421 @@
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:20:04 PAGE 1   
+
+
+C51 COMPILER V9.50a, COMPILATION OF MODULE NRF24L01_____
+OBJECT MODULE PLACED IN nRF24L01 接收.OBJ
+COMPILER INVOKED BY: C:\Program Files\Keil\C51\BIN\C51.EXE nRF24L01 接收.c BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include <reg52.h>
+   2          #include <intrins.h>
+   3          #include "nrf2401.h"
+   4          typedef unsigned char uchar;
+   5          typedef unsigned int uint;  
+   6          extern void Lcd_lnit (void);    //LCD初始化
+   7          //extern void hanzi_Disp(uchu xJ uchar y,uchar *s);
+   8          uchar *uchartostr (uchar num);
+   9          uchar *uchartostr(uchar num);
+  10          uchar str [4];//作为存储上面uchartostr函数转换的字符
+  11          uchar status;
+  12          uchar TX_ADDRESS[TX_ADR_WIDTH]= {0x01,0x02,0x03,0x04,0x05}; //本地地址 
+  13          uchar RX_ADDRESS[RX_ADR_WIDTH]= {0x01,0x02,0x03,0x04,0x05}; //接收地址 
+  14          uint  bdata sta;   //状态标志
+  15          sbit  RX_DR =sta^6;
+  16          sbit  TX_DS =sta^5;
+  17          sbit  MAX_RT  =sta^4;
+  18          
+  19          sbit io_LCD12864_RS = P2^0 ;
+  20          sbit io_LCD12864_RW = P2^1 ;
+  21          sbit io_LCD12864_EN = P2^2 ;
+  22          
+  23          sbit CE=P3^4;
+  24          sbit CSN =P3^7;
+  25          sbit SCK =P3^5;
+  26          sbit MOSI =P3^3;
+  27          sbit MISO =P3^6;
+  28          sbit IRQ =P3^2;
+  29          
+  30          #define io_LCD12864_DATAPORT P0
+  31          
+  32          #define SET_DATA  io_LCD12864_RS = 1 ;
+  33          #define SET_INC  io_LCD12864_RS = 0 ;
+  34          #define SET_READ  io_LCD12864_RW = 1 ;
+  35          #define SET_WRITE io_LCD12864_RW = 0 ;
+  36          #define SET_EN    io_LCD12864_EN = 1 ;
+  37          #define CLR_EN    io_LCD12864_EN = 0 ;
+  38          
+  39          void v_Lcd12864PutString_f( unsigned char x, unsigned char y, unsigned char *pData );
+  40          void v_DelayMs_f( unsigned int nDelay );
+  41          //*********************NRF24L01函数定义**************************** 
+  42          //void delayms(uint t);//毫秒延时
+  43          void init_NRF24L01(void);   //模块初始化函数
+  44          //uchar SPI_RW(uchar reg);    //基本SPI读写时序
+  45          uchar SPI_READ_Reg(uchar reg);  //从寄存器reg读一个字节
+  46          //void SetRX_Mode(void);      //设置接收模式
+  47          //uchar SPI_RW_Reg(uchar reg, uchar value);  //向寄存器写一个字节
+  48          //uchar SPI_Read_Buf(uchar reg, uchar *pBuf, uchar uchars); // 从缓冲器读出uchars字节的数据
+  49          //uchar SPI_Write_Buf(uchar reg, uchar *pBuf, uchar uchars); //向缓冲器写进uchars字节的数据
+  50          void nRF24L01_RxPacket(uchar * tx_buf); //启动一次发送
+  51          //uchar nRF24L01_RxPacket(uchar * rx_buf);//读取接收的数据，放入rx_buf数组
+  52          uchar *uchartostr(uchar  num);
+  53          
+  54          uchar *uchartostr(uchar  num)
+  55          {
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:20:04 PAGE 2   
+
+  56   1          uchar  x00,xx,x0,x,n;
+  57   1          x00=num/100;
+  58   1          xx=num%100;
+  59   1          x0= xx/10 ;
+  60   1          x= xx%10 ;
+  61   1          n=0;
+  62   1          if (x00!=0)
+  63   1          {str[n] =x00+48;//值加48即为字符
+  64   2            n++;
+  65   2          }
+  66   1          if(!(x00==0&&x0==0))
+  67   1          {
+  68   2            str[n]=x0+48;
+  69   2            n++;
+  70   2          }
+  71   1          str[n] =x+48;
+  72   1          n++;
+  73   1          str[n]='\0';
+  74   1          return str;
+  75   1      }
+  76            
+  77          /****************************************************************************************************
+  78          /*函数：uint SPI_RW(uint uchar1)
+  79          /*功能：NRF24L01的SPI写时序
+  80          /****************************************************************************************************/
+  81          uint SPI_RW(uint uchar1)
+  82          {
+  83   1          uint bit_ctr;
+  84   1          for(bit_ctr=0;bit_ctr<8;bit_ctr++) // output 8-bit
+  85   1          {
+  86   2          MOSI = (uchar1 & 0x80);         // output 'uchar', MSB to MOSI
+  87   2          uchar1 = (uchar1 << 1);           // shift next bit into MSB..
+  88   2          SCK = 1;                      // Set SCK high..
+  89   2          uchar1 |= MISO;             // capture current MISO bit
+  90   2          SCK = 0;                  // ..then set SCK low again
+  91   2          }
+  92   1          return(uchar1);                 // return read uchar
+  93   1      }
+  94              
+  95          
+  96          /****************************************************************************************************
+  97          /*函数：uchar SPI_Read(uchar reg)
+  98          /*功能：NRF24L01的SPI读时序
+  99          /****************************************************************************************************/
+ 100          uchar SPI_Read_Reg(uchar reg)
+ 101          {
+ 102   1        uchar reg_val;
+ 103   1      //  v_Lcd12864PutString_f(0,3,"进入read");
+ 104   1        CSN = 0;  // CSN low, initialize SPI communication...
+ 105   1      //  v_DelayMs_f( 1000 );
+ 106   1        SPI_RW(reg);            // Select register to read from..
+ 107   1        reg_val = SPI_RW(0);    // ..then read registervalue
+ 108   1        CSN = 1;                // CSN high, terminate SPI communication
+ 109   1          
+ 110   1        //  v_DelayMs_f(800);
+ 111   1        //  v_Lcd12864PutString_f(0,3,"退出read");
+ 112   1        
+ 113   1        
+ 114   1        return(reg_val);        // return register value
+ 115   1        
+ 116   1      }
+ 117          
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:20:04 PAGE 3   
+
+ 118          /****************************************************************************************************/
+ 119          /*功能：NRF24L01写寄存器函数
+ 120          /****************************************************************************************************/
+ 121          uint SPI_RW_Reg(uchar reg, uchar value)
+ 122          {
+ 123   1        uint status;
+ 124   1        
+ 125   1        CSN = 0;                   // CSN low, init SPI transaction
+ 126   1        status = SPI_RW(reg);      // select register
+ 127   1        SPI_RW(value);             // ..and write value to it..
+ 128   1        CSN = 1;                   // CSN high again
+ 129   1        
+ 130   1        return(status);            // return nRF24L01 status uchar
+ 131   1      }
+ 132          
+ 133          
+ 134          /****************************************************************************************************/
+ 135          /*函数：uint SPI_Read_Buf(uchar reg, uchar *pBuf, uchar uchars)
+ 136          /*功能: 用于读数据，reg：为寄存器地址，pBuf：为待读出数据地址，uchars：读出数据的个数
+ 137          /****************************************************************************************************/
+ 138          uint SPI_Read_Buf(uchar reg, uchar *pBuf, uchar uchars)
+ 139          {
+ 140   1        uint status,uchar_ctr;
+ 141   1        
+ 142   1        CSN = 0;                        // Set CSN low, init SPI tranaction
+ 143   1        status = SPI_RW(reg);           // Select register to write to and read status uchar
+ 144   1        
+ 145   1        for(uchar_ctr=0;uchar_ctr<uchars;uchar_ctr++)
+ 146   1          pBuf[uchar_ctr] = SPI_RW(0);    // 
+ 147   1        
+ 148   1        CSN = 1;                           
+ 149   1        
+ 150   1        return(status);                    // return nRF24L01 status uchar
+ 151   1      }
+ 152          /*********************************************************************************************************
+ 153          /*函数：uint SPI_Write_Buf(uchar reg, uchar *pBuf, uchar uchars)
+ 154          /*功能: 用于写数据：为寄存器地址，pBuf：为待写入数据地址，uchars：写入数据的个数
+ 155          //********************************************************************************************************
+             -*/
+ 156          uint SPI_Write_Buf(uchar reg, uchar  *pBuf, uchar uchars)
+ 157          {
+ 158   1        uint status,uchar_ctr;
+ 159   1        
+ 160   1        CSN = 0;            //SPI使能       
+ 161   1        status = SPI_RW(reg);   
+ 162   1        for(uchar_ctr=0; uchar_ctr<uchars; uchar_ctr++) //
+ 163   1          SPI_RW(*pBuf++);
+ 164   1        CSN = 1;           //关闭SPI
+ 165   1        return(status);    // 
+ 166   1      }
+ 167          
+ 168          void init_NRF24L01(void)
+ 169          {
+ 170   1        v_DelayMs_f(1);
+ 171   1        CE=0;
+ 172   1        CSN=1;
+ 173   1        SCK=0;
+ 174   1        IRQ=1;  
+ 175   1        SPI_Write_Buf(WRITE_REG+TX_ADDR,TX_ADDRESS,TX_ADR_WIDTH);
+ 176   1        SPI_Write_Buf(WRITE_REG+RX_ADDR_P0,RX_ADDRESS,TX_ADR_WIDTH);
+ 177   1        SPI_RW_Reg(WRITE_REG+EN_AA,0X00);
+ 178   1        SPI_RW_Reg(WRITE_REG+EN_RXADDR,0X01);
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:20:04 PAGE 4   
+
+ 179   1        SPI_RW_Reg(WRITE_REG+RF_CH,1);
+ 180   1        SPI_RW_Reg(WRITE_REG+RX_PW_P0,RX_PLOAD_WIDTH);
+ 181   1        SPI_RW_Reg(WRITE_REG+RF_SETUP+RF_SETUP,0X07);
+ 182   1      
+ 183   1      }
+ 184          
+ 185          void nRF24L01_TxPacket(unsigned char*tx_buf)
+ 186          {
+ 187   1        CE=0;
+ 188   1        SPI_Write_Buf(WRITE_REG+TX_ADDR,TX_ADDRESS,TX_ADR_WIDTH);
+ 189   1        SPI_Write_Buf(WRITE_REG+RX_ADDR_P0,TX_ADDRESS,TX_ADR_WIDTH);
+ 190   1        SPI_Write_Buf(WR_TX_PLOAD,tx_buf,TX_PLOAD_WIDTH);
+ 191   1        SPI_RW_Reg(WRITE_REG+CONFIG,0X0E);
+ 192   1        CE=1;
+ 193   1        v_DelayMs_f( 1 ) ;
+ 194   1      }
+ 195          
+ 196          /****************************************************************************************************/
+ 197          /*函数：void SetRX_Mode(void)
+ 198          /*功能：数据接收配置 
+ 199          /****************************************************************************************************/
+ 200          void SetRX_Mode(void)
+ 201          {
+ 202   1        CE=0;
+ 203   1        SPI_RW_Reg(WRITE_REG + CONFIG, 0x0f);       // IRQ收发完成中断响应，16位CRC ，主接收
+ 204   1        CE = 1; 
+ 205   1         v_DelayMs_f(10);
+ 206   1      
+ 207   1      }
+ 208          
+ 209          /******************************************************************************************************/
+ 210          /*函数：unsigned char nRF24L01_RxPacket(unsigned char* rx_buf)
+ 211          /*功能：数据读取后放如rx_buf接收缓冲区中
+ 212          /******************************************************************************************************/
+ 213          unsigned char NRF24L01_RxPacket(unsigned char* rx_buf)
+ 214          {
+ 215   1          unsigned char revale=0;
+ 216   1        status=SPI_Read_Reg(STATUS);  // 读取状态寄存其来判断数据接收状况
+ 217   1        //if(RX_DR)       // 判断是否接收到数据
+ 218   1        { 
+ 219   2           
+ 220   2            CE = 0;       
+ 221   2          SPI_Read_Buf(RD_RX_PLOAD,rx_buf,TX_PLOAD_WIDTH);// read receive payload from RX_FIFO buffer
+ 222   2          revale =1;      //读取数据完成标志
+ 223   2      //  CSN = 0;
+ 224   2      //  SPI_RW(FLUSH_RX);
+ 225   2       //   CSN = 1;
+ 226   2         /**到此为止*/
+ 227   2        SPI_RW_Reg(WRITE_REG+STATUS,0xff);//清中断标志   
+ 228   2        }
+ 229   1      
+ 230   1        
+ 231   1         return revale;
+ 232   1      }
+ 233          
+ 234          //********************************************************************************************************
+             -************************
+ 235          
+ 236          void v_Lcd12864CheckBusy_f( void )      //忙检测函数
+ 237          {
+ 238   1          unsigned int nTimeOut = 0 ;
+ 239   1          SET_INC
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:20:04 PAGE 5   
+
+ 240   1          SET_READ
+ 241   1          CLR_EN
+ 242   1          SET_EN
+ 243   1          while( ( io_LCD12864_DATAPORT & 0x80 ) && ( ++nTimeOut != 0 ) ) ; //最高位为0时表允许
+ 244   1          CLR_EN
+ 245   1          SET_INC
+ 246   1          SET_READ
+ 247   1      }
+ 248          
+ 249          void v_Lcd12864SendCmd_f( unsigned char byCmd )      //发送命令
+ 250          {
+ 251   1          v_Lcd12864CheckBusy_f() ;
+ 252   1          SET_INC
+ 253   1          SET_WRITE
+ 254   1          CLR_EN
+ 255   1          io_LCD12864_DATAPORT = byCmd ;
+ 256   1          _nop_();
+ 257   1          _nop_();
+ 258   1          SET_EN  
+ 259   1          _nop_();
+ 260   1          _nop_();
+ 261   1          CLR_EN
+ 262   1          SET_READ
+ 263   1          SET_INC
+ 264   1      }
+ 265          void v_Lcd12864SendData_f( unsigned char byData )    //发送数据
+ 266          {
+ 267   1          v_Lcd12864CheckBusy_f() ;
+ 268   1          SET_DATA
+ 269   1          SET_WRITE
+ 270   1          CLR_EN
+ 271   1          io_LCD12864_DATAPORT = byData ;
+ 272   1          _nop_();
+ 273   1          _nop_();
+ 274   1          SET_EN  
+ 275   1          _nop_();
+ 276   1          _nop_();
+ 277   1          CLR_EN
+ 278   1          SET_READ
+ 279   1          SET_INC
+ 280   1      }
+ 281          
+ 282          void v_DelayMs_f( unsigned int nDelay )              //n毫秒延时
+ 283          {
+ 284   1          unsigned int i ;
+ 285   1          for( ; nDelay > 0 ; nDelay-- )
+ 286   1          {
+ 287   2              for( i = 125 ; i > 0 ; i-- ) ;
+ 288   2          }
+ 289   1      }
+ 290          
+ 291          void v_Lcd12864Init_f( void )                  //初始化
+ 292          {
+ 293   1          v_Lcd12864SendCmd_f( 0x30 ) ;              //基本指令集  功能设定 8位数据 无扩充指令
+ 294   1          v_DelayMs_f( 50 ) ;
+ 295   1          v_Lcd12864SendCmd_f( 0x01 ) ;              //清屏
+ 296   1          v_DelayMs_f( 50 ) ;
+ 297   1          v_Lcd12864SendCmd_f( 0x06 ) ;              //光标右移
+ 298   1          v_DelayMs_f( 50 ) ;
+ 299   1          v_Lcd12864SendCmd_f( 0x0c ) ;              //开显示 关游标
+ 300   1      }
+ 301          void v_Lcd12864SetAddress_f( unsigned char x, y )  //地址转换   x是列数，y是行数 共8列4行
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:20:04 PAGE 6   
+
+ 302          {
+ 303   1          unsigned char byAddress ;
+ 304   1          switch( y )
+ 305   1          {
+ 306   2              case 0 :    byAddress = 0x80 + x ;
+ 307   2                  break;
+ 308   2              case 1 :    byAddress = 0x90 + x ;
+ 309   2                  break ;
+ 310   2              case 2 :    byAddress = 0x88 + x ;
+ 311   2                  break ;
+ 312   2              case 3 :    byAddress = 0x98 + x ;
+ 313   2                  break ;
+ 314   2              default :
+ 315   2                  break ;
+ 316   2          }
+ 317   1          v_Lcd12864SendCmd_f( byAddress ) ;
+ 318   1      }
+ 319          void v_Lcd12864PutString_f( unsigned char x, unsigned char y, unsigned char *pData )
+ 320          {
+ 321   1          v_Lcd12864SetAddress_f( x, y ) ;
+ 322   1          while( *pData != '\0' )
+ 323   1          {
+ 324   2              v_Lcd12864SendData_f( *pData++ ) ;
+ 325   2          }            
+ 326   1      
+ 327   1      }
+ 328          
+ 329          void main()
+ 330          {
+ 331   1        uchar RxBuf[32];
+ 332   1        uchar Buf0[5]={0,0,0,0,0};
+ 333   1        uchar i=0;
+ 334   1      
+ 335   1      init_NRF24L01();
+ 336   1        IRQ=1;
+ 337   1      
+ 338   1      //  SPI_Read_Buf(RX_ADDR_P0,Buf0,5);
+ 339   1        
+ 340   1      v_DelayMs_f(100);
+ 341   1      v_Lcd12864Init_f() ;
+ 342   1      v_Lcd12864SendCmd_f(0x01) ;
+ 343   1      v_DelayMs_f(2);
+ 344   1      v_Lcd12864PutString_f(0,0,"环境温度");
+ 345   1      v_Lcd12864PutString_f(0,2,"RX_N");//接收次数  
+ 346   1      v_DelayMs_f(1000);
+ 347   1      SetRX_Mode();
+ 348   1      
+ 349   1      while(1)
+ 350   1        {
+ 351   2          if(IRQ==0)
+ 352   2          {
+ 353   3        
+ 354   3          NRF24L01_RxPacket(RxBuf);
+ 355   3        
+ 356   3          v_Lcd12864PutString_f(0,1,uchartostr(RxBuf[0]));
+ 357   3            
+ 358   3            
+ 359   3        v_Lcd12864PutString_f(1,1,"."); 
+ 360   3          v_Lcd12864PutString_f(2,1,uchartostr(RxBuf[1]));
+ 361   3      v_Lcd12864PutString_f(3,1,"℃");
+ 362   3            
+ 363   3            v_Lcd12864PutString_f(3,2,uchartostr(RxBuf[2]));
+C51 COMPILER V9.50a   NRF24L01_____                                                        09/25/2012 10:20:04 PAGE 7   
+
+ 364   3            
+ 365   3      //    v_Lcd12864SendCmd_f(0x01) ;
+ 366   3          
+ 367   3        //v_Lcd12864PutString_f(0,3,uchartostr(RxBuf[31]));
+ 368   3            IRQ=1;
+ 369   3            
+ 370   3            CE=0;
+ 371   3          SPI_RW_Reg(WRITE_REG + CONFIG, 0x0f);       // IRQ收发完成中断响应，16位CRC ，主接收
+ 372   3            
+ 373   3            
+ 374   3          CE = 1; 
+ 375   3          v_DelayMs_f(5);
+ 376   3          
+ 377   3          
+ 378   3        }
+ 379   2      
+ 380   2      
+ 381   2      }
+ 382   1        
+ 383   1      
+ 384   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    879    ----
+   CONSTANT SIZE    =     24    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     17      63
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

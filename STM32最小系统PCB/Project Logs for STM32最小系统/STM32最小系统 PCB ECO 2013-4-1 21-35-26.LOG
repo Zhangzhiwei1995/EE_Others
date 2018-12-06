@@ -1,0 +1,10 @@
+Added Pin To Net: NetName=FSMC D1 Pin=P1-43
+Added Pin To Net: NetName=FSMC D0 Pin=P1-44
+Added Pin To Net: NetName=FSMC D15 Pin=P1-48
+Added Pin To Net: NetName=FSMC D14 Pin=P1-49
+Added Pin To Net: NetName=FSMC D13 Pin=P1-50
+Added Pin To Net: NetName=FSMC D13 Pin=U1-77
+Added Pin To Net: NetName=FSMC D14 Pin=U1-78
+Added Pin To Net: NetName=FSMC D15 Pin=U1-79
+Added Pin To Net: NetName=FSMC D0 Pin=U1-85
+Added Pin To Net: NetName=FSMC D1 Pin=U1-86

@@ -1,0 +1,2 @@
+Remove Pin=U1A-6 From Net=INT1
+Add Pin To Net: Pin=U1A-6 Old Net=INT1 New Net=INT0

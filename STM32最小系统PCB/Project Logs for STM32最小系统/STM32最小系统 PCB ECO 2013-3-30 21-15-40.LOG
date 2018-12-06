@@ -1,0 +1,10 @@
+Removed Pin From Net: NetName=RESET Pin=RESET-2
+Removed Pin From Net: NetName=RESET Pin=RESET-2
+Change Component DesignItemId : Designator=RESET Old DesignItemId=SW-DPB New DesignItemId=SW-PB
+Change Component Comment : Designator=RESET Old Comment=SW-DPB New Comment=SW-PB
+Change Component Library : Designator=RESET Old Library=Switch开关.SCHLIB New Library=SW开关.SCHLIB
+Added Pin To Net: NetName=RESET Pin=RESET-1
+Added Pin To Net: NetName=RESET Pin=RESET-1
+Added Pin To Net: NetName=GND Pin=RESET-2
+Added Pin To Net: NetName=GND Pin=RESET-2
+Added Room: Name=STM32最小系统

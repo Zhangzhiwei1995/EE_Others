@@ -1,0 +1,5 @@
+Removed Pin From Net: NetName=INT1 Pin=R15-2
+Removed Pin From Net: NetName=INT1 Pin=R16-2
+Added Pin To Net: NetName=INT0 Pin=R15-2
+Added Pin To Net: NetName=INT0 Pin=R16-2
+Added Room: Name=Êý¿ØÎÈÑ¹µçÔ´

@@ -1,0 +1,50 @@
+Added Component: Designator=C1(CAO1)
+Added Component: Designator=C2(CAO1)
+Added Component: Designator=J1(sip-2)
+Added Component: Designator=R1(AXIAL0.3)
+Added Component: Designator=R2(AXIAL0.3)
+Added Component: Designator=R3(AXIAL0.3)
+Added Component: Designator=R4(AXIAL0.3)
+Added Component: Designator=R5(AXIAL0.3)
+Added Component: Designator=R6(AXIAL0.3)
+Added Component: Designator=X1(SOT-223)
+Added Pin To Net: NetName=3.3V Pin=C2-1
+Added Pin To Net: NetName=3.3V Pin=X1-2
+Added Net: Name=3.3V
+Added Pin To Net: NetName=GND Pin=C1-2
+Added Pin To Net: NetName=GND Pin=C2-2
+Added Pin To Net: NetName=GND Pin=X1-1
+Added Net: Name=GND
+Added Pin To Net: NetName=NetC1_1 Pin=C1-1
+Added Pin To Net: NetName=NetC1_1 Pin=X1-3
+Added Net: Name=NetC1_1
+Added Pin To Net: NetName=NetJ1_1 Pin=J1-1
+Added Net: Name=NetJ1_1
+Added Pin To Net: NetName=NetJ1_2 Pin=J1-2
+Added Net: Name=NetJ1_2
+Added Pin To Net: NetName=NetJ2_5 Pin=R6-1
+Added Net: Name=NetJ2_5
+Added Pin To Net: NetName=NetJ2_6 Pin=R5-1
+Added Net: Name=NetJ2_6
+Added Pin To Net: NetName=NetJ2_7 Pin=R1-1
+Added Net: Name=NetJ2_7
+Added Pin To Net: NetName=NetJ2_8 Pin=R2-1
+Added Net: Name=NetJ2_8
+Added Pin To Net: NetName=NetJ2_9 Pin=R3-1
+Added Net: Name=NetJ2_9
+Added Pin To Net: NetName=NetJ2_10 Pin=R4-1
+Added Net: Name=NetJ2_10
+Added Pin To Net: NetName=NetR1_2 Pin=R1-2
+Added Net: Name=NetR1_2
+Added Pin To Net: NetName=NetR2_2 Pin=R2-2
+Added Net: Name=NetR2_2
+Added Pin To Net: NetName=NetR3_2 Pin=R3-2
+Added Net: Name=NetR3_2
+Added Pin To Net: NetName=NetR4_2 Pin=R4-2
+Added Net: Name=NetR4_2
+Added Pin To Net: NetName=NetR5_2 Pin=R5-2
+Added Net: Name=NetR5_2
+Added Pin To Net: NetName=NetR6_2 Pin=R6-2
+Added Net: Name=NetR6_2
+Added Class: Name=nRF24L01 无线收发
+Added Room: Name=nRF24L01 无线收发

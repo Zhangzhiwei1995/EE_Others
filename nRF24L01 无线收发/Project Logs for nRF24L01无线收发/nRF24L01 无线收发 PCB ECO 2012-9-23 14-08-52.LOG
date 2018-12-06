@@ -1,0 +1,12 @@
+Added Component: Designator=J2(10P插槽)
+Added Pin To Net: NetName=NetC1_1 Pin=J2-1
+Added Pin To Net: NetName=GND Pin=J2-2
+Added Pin To Net: NetName=NetJ1_2 Pin=J2-3
+Added Pin To Net: NetName=NetJ1_1 Pin=J2-4
+Added Pin To Net: NetName=NetJ2_5 Pin=J2-5
+Added Pin To Net: NetName=NetJ2_6 Pin=J2-6
+Added Pin To Net: NetName=NetJ2_7 Pin=J2-7
+Added Pin To Net: NetName=NetJ2_8 Pin=J2-8
+Added Pin To Net: NetName=NetJ2_9 Pin=J2-9
+Added Pin To Net: NetName=NetJ2_10 Pin=J2-10
+Added Member To Class: ClassName=nRF24L01 无线收发 Member=Component J2 10P插槽
