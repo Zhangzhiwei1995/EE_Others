@@ -1,0 +1,5 @@
+Removed Pin From Net: NetName=GND Pin=D1-2
+Removed Pin From Net: NetName=+5V Pin=R2-2
+Removed Member From Class: ClassName=³¬Éù²¨²â¾à Member=D1
+Removed Member From Class: ClassName=³¬Éù²¨²â¾à Member=R2
+Added Room: Name=³¬Éù²¨²â¾à

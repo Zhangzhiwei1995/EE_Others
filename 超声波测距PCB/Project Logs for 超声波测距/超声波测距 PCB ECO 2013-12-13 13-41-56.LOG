@@ -1,0 +1,13 @@
+Removed Pin From Net: NetName=P33 Pin=J6-4
+Change Component Designator: OldDesignator=7805 NewDesignator=1
+Change Component Designator: OldDesignator=J6 NewDesignator=J4
+Change Component Designator: OldDesignator=R3 NewDesignator=R2
+Change Component Designator: OldDesignator=R4 NewDesignator=R3
+Added Component: Designator=S2(SW15*15)
+Added Pin To Net: NetName=P24 Pin=J4-4
+Added Pin To Net: NetName=P33 Pin=S2-1
+Added Pin To Net: NetName=P33 Pin=S2-1
+Added Pin To Net: NetName=GND Pin=S2-2
+Added Pin To Net: NetName=GND Pin=S2-2
+Added Member To Class: ClassName=³¬Éù²¨²â¾à Member=Component S2 SW-PB
+Added Room: Name=³¬Éù²¨²â¾à

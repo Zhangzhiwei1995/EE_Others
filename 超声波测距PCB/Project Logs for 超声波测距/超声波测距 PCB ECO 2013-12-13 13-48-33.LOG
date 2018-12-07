@@ -1,0 +1,7 @@
+Added Component: Designator=S3(SW15*15)
+Added Pin To Net: NetName=RST Pin=S3-1
+Added Pin To Net: NetName=RST Pin=S3-1
+Added Pin To Net: NetName=+5V Pin=S3-2
+Added Pin To Net: NetName=+5V Pin=S3-2
+Added Member To Class: ClassName=³¬Éù²¨²â¾à Member=Component S3 SW-PB
+Added Room: Name=³¬Éù²¨²â¾à

@@ -1,0 +1,8 @@
+Removed Pin From Net: NetName=7.5V Pin=J3-2
+Added Component: Designator=S0(SWB6*11_P3)
+Added Pin To Net: NetName=7.5V Pin=S0-1
+Added Pin To Net: NetName=NetJ3_2 Pin=J3-2
+Added Pin To Net: NetName=NetJ3_2 Pin=S0-2
+Added Net: Name=NetJ3_2
+Added Member To Class: ClassName=³¬Éù²¨²â¾à Member=Component S0 SW-SPDT
+Added Room: Name=³¬Éù²¨²â¾à

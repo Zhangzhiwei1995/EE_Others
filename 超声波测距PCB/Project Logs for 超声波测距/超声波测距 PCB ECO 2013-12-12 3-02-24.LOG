@@ -1,0 +1,16 @@
+Removed Pin From Net: NetName=RST Pin=S2-1
+Removed Pin From Net: NetName=RST Pin=S2-1
+Removed Pin From Net: NetName=+5V Pin=S2-2
+Removed Pin From Net: NetName=+5V Pin=S2-2
+Removed Pin From Net: NetName=P20 Pin=S3-1
+Removed Pin From Net: NetName=P20 Pin=S3-1
+Removed Pin From Net: NetName=GND Pin=S3-2
+Removed Pin From Net: NetName=GND Pin=S3-2
+Removed Pin From Net: NetName=P21 Pin=S4-1
+Removed Pin From Net: NetName=P21 Pin=S4-1
+Removed Pin From Net: NetName=GND Pin=S4-2
+Removed Pin From Net: NetName=GND Pin=S4-2
+Removed Member From Class: ClassName=³¬Éù²¨²â¾à Member=S2
+Removed Member From Class: ClassName=³¬Éù²¨²â¾à Member=S3
+Removed Member From Class: ClassName=³¬Éù²¨²â¾à Member=S4
+Added Room: Name=³¬Éù²¨²â¾à

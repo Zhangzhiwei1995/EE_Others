@@ -1,0 +1,9 @@
+Removed Pin From Net: NetName=7.5V Pin=J3-1
+Removed Pin From Net: NetName=GND Pin=J5-1
+Removed Member From Class: ClassName=³¬Éù²¨²â¾à Member=J5
+Change Component DesignItemId : Designator=J3 Old DesignItemId=CON1 New DesignItemId=CON2
+Change Component Footprint: Designator=J3 Old Footprint=SIP-1 New Footprint=sip-2
+Change Component Comment : Designator=J3 Old Comment=CON1 New Comment=CON2
+Added Pin To Net: NetName=GND Pin=J3-1
+Added Pin To Net: NetName=7.5V Pin=J3-2
+Added Room: Name=³¬Éù²¨²â¾à
